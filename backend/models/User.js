@@ -12,7 +12,9 @@ const userSchema = new mongoose.Schema({
   email: { type: String, unique: true },
   password: String,
   balance: { type: Number, default: 100000 }, // starting virtual cash
-  holdings: [holdingSchema]
+  holdings: [holdingSchema],
+  isAdmin: { type: Boolean, default: false }
+
 });
 
 module.exports = mongoose.model("User", userSchema);

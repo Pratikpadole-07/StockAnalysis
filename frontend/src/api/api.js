@@ -19,6 +19,9 @@ function authHeader() {
     Authorization: `Bearer ${token}`,
   };
 }
+export const createStock = async(data) => {
+   return await axios.post("http://localhost:5000/stocks/add", data);
+};
 
 export const buyStock = (data) =>
   axios.post(`${API}/trades/buy`, data, {
@@ -37,3 +40,9 @@ export const getPortfolioStats = () =>
 
 export const getLeaderboard = () =>
   axios.get(`${API}/portfolio/leaderboard`);
+
+export const adminAddStock = (data) =>
+  axios.post(`${API}/admin/add-stock`, data, { headers: authHeader() });
+
+export const adminUpdateVolatility = (data) =>
+  axios.post(`${API}/admin/update-volatility`, data, { headers: authHeader() });

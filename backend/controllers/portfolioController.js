@@ -36,13 +36,14 @@ exports.getLeaderboard = async (req, res) => {
         const leaderboard = users.map(u => {
             const stats = calcStats(u, stockMap);
             return {
-                user: u.name,
+                name: u.name,
                 email: u.email,
                 netWorth: stats.netWorth,
                 investedValue: stats.investedValue,
                 currentValue: stats.currentValue,
                 profitPercent: stats.profitPercent,
-            };
+};
+
         });
 
         leaderboard.sort((a,b)=> b.netWorth - a.netWorth);

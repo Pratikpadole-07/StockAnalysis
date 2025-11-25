@@ -1,42 +1,61 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { getLeaderboard } from "../api/api";
 
-export default function Leaderboard(){
+export default function Leaderboard() {
 
-  const [data, setData] = useState([]);
+  const [users, setUsers] = useState([]);
 
-  useEffect(()=>{
+  useEffect(() => {
     load();
-  },[]);
+  }, []);
 
-  const load = async ()=>{
+  const load = async () => {
     const res = await getLeaderboard();
-    setData(res.data);
+    setUsers(res.data);
   };
 
-  return(
-    <div>
-      <h2>Leaderboard</h2>
+  return (
+    <div className="p-6 bg-gradient-to-br from-gray-900 via-gray-800 to-black min-h-screen text-white">
 
-      <table border="1" cellPadding="10">
-        <thead>
+      <h1 className="text-4xl font-bold mb-8 tracking-wide">Leaderboard</h1>
+
+      <table className="w-full bg-gray-800/40 shadow-2xl border border-gray-700 rounded-2xl overflow-hidden backdrop-blur-xl">
+
+        <thead className="bg-gray-700 text-left">
           <tr>
-            <th>User</th>
-            <th>Net Worth</th>
-            <th>Profit %</th>
+            <th className="p-3">Rank</th>
+            <th className="p-3">Name</th>
+            <th className="p-3">Net Worth</th>
+            <th className="p-3">P/L %</th>
           </tr>
         </thead>
 
-        <tbody>
-          {data.map((u,i)=>(
-            <tr key={i}>
-              <td>{u.user}</td>
-              <td>₹{u.netWorth.toFixed(2)}</td>
-              <td>{u.profitPercent.toFixed(2)}%</td>
+        <tbody className="divide-y divide-gray-700">
+          {users.map((u, idx) => (
+            <tr
+              key={u._id}
+              className="hover:bg-gray-700/50 transition-all"
+            >
+              <td className="p-3 font-bold text-yellow-300">#{idx + 1}</td>
+              <td className="p-3">{u.name}</td>
+              <td className="p-3 text-blue-400">₹{u.netWorth.toFixed(2)}</td>
+
+              <td
+                className={
+                  "p-3 font-semibold " +
+                  (u.profitPercent >= 0 ? "text-green-400" : "text-red-400")
+                }
+              >
+                {u.profitPercent.toFixed(2)}%
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
+
+      {users.length === 0 && (
+        <p className="text-center text-gray-400 mt-10">No users yet.</p>
+      )}
     </div>
   );
 }

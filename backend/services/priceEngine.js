@@ -10,7 +10,7 @@ function startPriceEngine(io) {
         const stocks = await Stock.find();
 
         for (let s of stocks) {
-
+             s.prevPrice = s.price
             let change = (Math.random() * s.volatility) - (s.volatility / 2);
 
             s.price = parseFloat((s.price + change).toFixed(2));

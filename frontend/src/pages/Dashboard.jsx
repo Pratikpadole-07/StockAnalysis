@@ -1,18 +1,25 @@
 import React, { useEffect, useState } from "react";
-import { 
-  getStocks, 
-  buyStock, 
-  sellStock, 
-  getPortfolioStats 
+import {
+  getStocks,
+  buyStock,
+  sellStock,
+  getPortfolioStats
 } from "../api/api";
 import socket from "../socket/socket";
+import BuyModal from "../components/BuyModal";
+import SellModal from "../components/SellModal";
+import Ticker from "../components/Ticker";
 
 export default function Dashboard() {
   const [stocks, setStocks] = useState([]);
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState(null);
 
-  // Load User from LocalStorage
+  const [showBuy, setShowBuy] = useState(false);
+  const [selectedStock, setSelectedStock] = useState(null);
+  const [showSell, setShowSell] = useState(false);
+  const [selectedHolding, setSelectedHolding] = useState(null);
+
   useEffect(() => {
     const stored = localStorage.getItem("user");
     if (stored) {
@@ -22,14 +29,9 @@ export default function Dashboard() {
     }
   }, []);
 
-  // Load Stocks + Socket live feed
   useEffect(() => {
     loadStocks();
-
-    socket.on("update-stocks", (data) => {
-      setStocks(data);
-    });
-
+    socket.on("update-stocks", (data) => setStocks(data));
     return () => socket.off("update-stocks");
   }, []);
 
@@ -38,162 +40,191 @@ export default function Dashboard() {
     setStocks(res.data);
   };
 
-  // load stats whenever user changes
   useEffect(() => {
-    if (user) {
-      loadPortfolioStats();
-    }
+    if (user) loadPortfolioStats();
   }, [user]);
 
   const loadPortfolioStats = async () => {
-    try {
-      const res = await getPortfolioStats();
-      setStats(res.data);
-    } catch (e) {
-      console.log("Stats load failed");
-    }
+    const res = await getPortfolioStats();
+    setStats(res.data);
   };
 
-  // BUY Handler
-  const handleBuy = async (stock) => {
-    const qtyStr = prompt(`Enter qty to BUY for ${stock.symbol}`);
-    if (!qtyStr) return;
-
-    const quantity = Number(qtyStr);
-    if (quantity <= 0 || isNaN(quantity)) return alert("Invalid qty");
-
-    try {
-      const res = await buyStock({
-        stockId: stock._id,
-        quantity,
-      });
-
-      alert("Buy Successful");
-
-      const updated = res.data.user;
-      setUser(updated);
-      localStorage.setItem("user", JSON.stringify(updated));
-      loadPortfolioStats();
-
-    } catch (err) {
-      alert(err.response.data.msg);
-    }
+  const openBuyModal = (stock) => {
+    setSelectedStock(stock);
+    setShowBuy(true);
   };
 
-  // SELL handler
-  const handleSell = async (holding) => {
-    const qtyStr = prompt(`Enter qty to SELL for ${holding.symbol}`);
-    if (!qtyStr) return;
+  const confirmBuy = async (qty) => {
+    if (!qty || qty <= 0) return alert("Invalid qty");
 
-    const quantity = Number(qtyStr);
-    if (quantity <= 0 || isNaN(quantity)) return alert("Invalid qty");
+    const res = await buyStock({
+      stockId: selectedStock._id,
+      quantity: qty,
+    });
 
-    try {
-      const res = await sellStock({
-        stockId: holding.stock,
-        quantity
-      });
+    alert("Purchase successful");
 
-      alert("Sell Successful");
+    const updated = res.data.user;
+    setUser(updated);
+    localStorage.setItem("user", JSON.stringify(updated));
 
-      const updated = res.data.user;
-      setUser(updated);
-      localStorage.setItem("user", JSON.stringify(updated));
-      loadPortfolioStats();
+    loadPortfolioStats();
 
-    } catch (err) {
-      alert(err.response.data.msg);
-    }
+    setShowBuy(false);
   };
+
+  const handleSell = (holding) => {
+  setSelectedHolding(holding);
+  setShowSell(true);
+};
+const confirmSell = async (qty) => {
+
+  if (!qty || qty <= 0) return alert("Invalid qty");
+
+  const res = await sellStock({
+    stockId: selectedHolding.stock,
+    quantity: qty,
+  });
+
+  alert("Sell successful");
+
+  const updated = res.data.user;
+  setUser(updated);
+  localStorage.setItem("user", JSON.stringify(updated));
+
+  loadPortfolioStats();
+
+  setShowSell(false);
+};
 
 
   return (
-    <div style={{ padding: "20px" }}>
+    <div className="p-8 bg-gradient-to-br from-black via-gray-900 to-gray-800 min-h-screen text-white">
 
-      <h1>Dashboard</h1>
+      <h1 className="text-4xl font-bold mb-6 tracking-wide">📈 Live Market Dashboard</h1>
 
       {user && (
-        <h3>
-          User: {user.name} &nbsp; | &nbsp; Balance: ₹{user.balance?.toFixed(2)}
-        </h3>
+        <div className="text-lg mb-8 opacity-90">
+          Welcome back,
+          <span className="text-yellow-400 font-semibold"> {user.name}</span>
+          — Balance:
+          <span className="text-green-400 font-semibold">
+            &nbsp;₹{user.balance.toFixed(2)}
+          </span>
+        </div>
       )}
 
-      {/* PORTFOLIO SUMMARY */}
       {stats && (
-        <div style={{ 
-          padding: "10px", 
-          border: "1px solid black",
-          marginBottom: "20px",
-          width: "350px"
-        }}>
-          <h3>Portfolio Summary</h3>
+        <div className="bg-gray-800/40 p-6 rounded-xl border border-gray-700 backdrop-blur-xl shadow-xl w-96 mb-10">
+          <h2 className="text-xl font-semibold mb-4">Portfolio Metrics</h2>
 
-          <p><b>Invested:</b> ₹{stats.investedValue.toFixed(2)}</p>
-          <p><b>Current Value:</b> ₹{stats.currentValue.toFixed(2)}</p>
-          <p><b>Profit / Loss:</b> ₹{stats.profitLoss.toFixed(2)}</p>
-          <p><b>P/L %:</b> {stats.profitPercent.toFixed(2)}%</p>
+          <p className="mb-1">Invested: ₹{stats.investedValue.toFixed(2)}</p>
+          <p className="mb-1">Current: ₹{stats.currentValue.toFixed(2)}</p>
 
-          <hr/>
+          <p className="mt-2">
+            P/L:{" "}
+            <span className={stats.profitLoss >= 0 ? "text-green-400" : "text-red-400"}>
+              ₹{stats.profitLoss.toFixed(2)}
+            </span>
+          </p>
+
+          <p>
+            P/L %:{" "}
+            <span className={stats.profitPercent >= 0 ? "text-green-400" : "text-red-400"}>
+              {stats.profitPercent.toFixed(2)}%
+            </span>
+          </p>
+
+          <hr className="my-3 border-gray-600" />
+
           <p><b>Net Worth:</b> ₹{stats.netWorth.toFixed(2)}</p>
+
         </div>
       )}
 
       {/* STOCK TABLE */}
-      <h2>Stocks</h2>
-      <table border="1" cellPadding="10">
-        <thead>
+      <h2 className="text-2xl mb-3 font-semibold">Market Stocks</h2>
+
+      <table className="w-full bg-gray-900/40 border border-gray-700 rounded-xl overflow-hidden">
+        <thead className="bg-gray-700/40">
           <tr>
-            <th>Symbol</th>
-            <th>Name</th>
-            <th>Price</th>
-            <th>Action</th>
+            <th className="p-3">Symbol</th>
+            <th className="p-3">Name</th>
+            <th className="p-3">Price</th>
+            <th className="p-3"></th>
           </tr>
         </thead>
 
         <tbody>
           {stocks.map((s) => (
-            <tr key={s._id}>
-              <td>{s.symbol}</td>
-              <td>{s.name}</td>
-              <td>{s.price}</td>
-              <td>
-                <button onClick={() => handleBuy(s)}>BUY</button>
+            <tr key={s._id} className="border-t border-gray-800 hover:bg-gray-800/60 transition">
+              <td className="p-3">{s.symbol}</td>
+              <td className="p-3">{s.name}</td>
+              <td className="p-3">₹{s.price}</td>
+              <td className="p-3">
+                <button
+                  onClick={() => openBuyModal(s)}
+                  className="bg-blue-600 hover:bg-blue-700 px-4 py-1 rounded"
+                >
+                  BUY
+                </button>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
 
-
-      {user && user.holdings?.length > 0 && (
+      {/* HOLDINGS */}
+      {user?.holdings?.length > 0 && (
         <>
-        <h2 style={{ marginTop:"40px" }}>Your Holdings</h2>
+          <h2 className="text-2xl font-semibold mt-12 mb-3">Holdings</h2>
 
-        <table border="1" cellPadding="10">
-          <thead>
-            <tr>
-              <th>Symbol</th>
-              <th>Qty</th>
-              <th>Avg Price</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {user.holdings.map(h => (
-              <tr key={h._id}>
-                <td>{h.symbol}</td>
-                <td>{h.quantity}</td>
-                <td>{h.avgPrice.toFixed(2)}</td>
-                <td>
-                  <button onClick={() => handleSell(h)}>SELL</button>
-                </td>
+          <table className="w-full bg-gray-900/40 border border-gray-700 rounded-xl overflow-hidden">
+            <thead className="bg-gray-700/40">
+              <tr>
+                <th className="p-3">Symbol</th>
+                <th className="p-3">Qty</th>
+                <th className="p-3">Avg Price</th>
+                <th className="p-3"></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {user.holdings.map((h) => (
+                <tr key={h._id} className="border-t border-gray-800 hover:bg-gray-800/60 transition">
+                  <td className="p-3">{h.symbol}</td>
+                  <td className="p-3">{h.quantity}</td>
+                  <td className="p-3">₹{h.avgPrice.toFixed(2)}</td>
+                  <td className="p-3">
+                    <button
+                      onClick={() => handleSell(h)}
+                      className="bg-red-600 hover:bg-red-700 px-4 py-1 rounded"
+                    >
+                      SELL
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </>
       )}
+
+      {showBuy && (
+        <BuyModal
+          stock={selectedStock}
+          onClose={() => setShowBuy(false)}
+          onConfirm={confirmBuy}
+        />
+      )}
+    {showSell && (
+  <SellModal
+    holding={selectedHolding}
+    onClose={() => setShowSell(false)}
+    onConfirm={confirmSell}
+  />
+)}
+  <Ticker />
 
     </div>
   );

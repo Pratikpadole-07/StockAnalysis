@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+@keyframes scroll {
+  0% { transform: translateX(100%) }
+  100% { transform: translateX(-100%) }
+}
+
+.animate-marquee {
+  display: inline-block;
+  animation: scroll 45s linear infinite;
+}
