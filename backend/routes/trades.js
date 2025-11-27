@@ -1,9 +1,10 @@
 const router = require("express").Router();
 const auth = require("../middleware/auth");
-const { buyStock, sellStock } = require("../controllers/tradeController");
+const { buyStock, sellStock, getHistory } = require("../controllers/tradeController");
 
-// all trade routes require auth
+// protected routes
 router.post("/buy", auth, buyStock);
 router.post("/sell", auth, sellStock);
+router.get("/history", auth, getHistory);
 
 module.exports = router;

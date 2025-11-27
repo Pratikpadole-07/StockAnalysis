@@ -3,8 +3,6 @@ const Stock = require("../models/Stock");
 
 function calcStats(user, stocksMap) {
 
-   
-
     if (!user) {
     return {
       investedValue: 0,
@@ -40,7 +38,8 @@ function calcStats(user, stocksMap) {
         currentValue,
         profitLoss,
         profitPercent,
-        netWorth
+        netWorth,
+        netWorthHistory: user.netWorthHistory || [] 
     };
 }
 

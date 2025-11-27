@@ -39,10 +39,19 @@ export const getPortfolioStats = () =>
   });
 
 export const getLeaderboard = () =>
-  axios.get(`${API}/portfolio/leaderboard`);
+  axios.get(`${API}/portfolio/leaderboard`, {
+    headers: authHeader(),
+  });
 
 export const adminAddStock = (data) =>
   axios.post(`${API}/admin/add-stock`, data, { headers: authHeader() });
 
 export const adminUpdateVolatility = (data) =>
   axios.post(`${API}/admin/update-volatility`, data, { headers: authHeader() });
+
+export const getTradeHistory = () =>
+  axios.get(`${API}/trades/history`, {
+    headers: authHeader(),
+  });
+
+

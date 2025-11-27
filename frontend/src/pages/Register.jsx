@@ -24,7 +24,10 @@ export default function Register() {
   }
 
   return (
-    <div className="h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex justify-center items-center">
+    <div className="min-h-screen p-8 transition-colors duration-500
++   bg-gray-100 text-black
++   dark:bg-gradient-to-br dark:from-black dark:via-gray-900 dark:to-gray-800
++   dark:text-white">
 
       <div className="bg-gray-800/40 border border-gray-700 backdrop-blur-xl shadow-xl rounded-2xl p-8 w-96">
 

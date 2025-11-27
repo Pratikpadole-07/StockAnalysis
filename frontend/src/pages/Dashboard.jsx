@@ -9,6 +9,8 @@ import socket from "../socket/socket";
 import BuyModal from "../components/BuyModal";
 import SellModal from "../components/SellModal";
 import Ticker from "../components/Ticker";
+import { toast } from "react-toastify";
+import PortfolioChart from "../components/PortfolioChart";
 
 export default function Dashboard() {
   const [stocks, setStocks] = useState([]);
@@ -21,11 +23,18 @@ export default function Dashboard() {
   const [selectedHolding, setSelectedHolding] = useState(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem("user");
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      setUser(parsed);
-      socket.emit("join", parsed._id);
+    try {
+      const stored = localStorage.getItem("user");
+      if (stored && stored !== "undefined") {
+        const parsed = JSON.parse(stored);
+        setUser(parsed);
+        socket.emit("join", parsed._id);
+      } else {
+        localStorage.removeItem("user");
+      }
+    } catch (err) {
+      console.error("User parse failed");
+      localStorage.removeItem("user");
     }
   }, []);
 
@@ -36,8 +45,12 @@ export default function Dashboard() {
   }, []);
 
   const loadStocks = async () => {
-    const res = await getStocks();
-    setStocks(res.data);
+    try {
+      const res = await getStocks();
+      setStocks(res.data);
+    } catch (err) {
+      console.error("Stock load failed");
+    }
   };
 
   useEffect(() => {
@@ -45,8 +58,12 @@ export default function Dashboard() {
   }, [user]);
 
   const loadPortfolioStats = async () => {
-    const res = await getPortfolioStats();
-    setStats(res.data);
+    try {
+      const res = await getPortfolioStats();
+      setStats(res.data);
+    } catch {
+      console.log("Stats error");
+    }
   };
 
   const openBuyModal = (stock) => {
@@ -55,112 +72,162 @@ export default function Dashboard() {
   };
 
   const confirmBuy = async (qty) => {
-    if (!qty || qty <= 0) return alert("Invalid qty");
+    if (!qty || qty <= 0) return toast.error("Invalid qty");
 
-    const res = await buyStock({
-      stockId: selectedStock._id,
-      quantity: qty,
-    });
+    try {
+      const res = await buyStock({
+        stockId: selectedStock._id,
+        quantity: qty,
+      });
 
-    alert("Purchase successful");
-
-    const updated = res.data.user;
-    setUser(updated);
-    localStorage.setItem("user", JSON.stringify(updated));
-
-    loadPortfolioStats();
-
+      toast.success("Buy Successful 🚀");
+      const updated = res.data.user;
+      setUser(updated);
+      localStorage.setItem("user", JSON.stringify(updated));
+      loadPortfolioStats();
+    } catch {
+      toast.error("Buy Failed");
+    }
     setShowBuy(false);
   };
 
   const handleSell = (holding) => {
-  setSelectedHolding(holding);
-  setShowSell(true);
-};
-const confirmSell = async (qty) => {
+    setSelectedHolding(holding);
+    setShowSell(true);
+  };
 
-  if (!qty || qty <= 0) return alert("Invalid qty");
+  const confirmSell = async (qty) => {
+    if (!qty || qty <= 0) return toast.error("Invalid qty");
+    try {
+      const res = await sellStock({
+        stockId: selectedHolding.stock,
+        quantity: qty,
+      });
 
-  const res = await sellStock({
-    stockId: selectedHolding.stock,
-    quantity: qty,
-  });
+      toast.success("Sell Successful 💰");
+      const updated = res.data.user;
+      setUser(updated);
+      localStorage.setItem("user", JSON.stringify(updated));
+      loadPortfolioStats();
+    } catch {
+      toast.error("Sell Failed");
+    }
+    setShowSell(false);
+  };
 
-  alert("Sell successful");
-
-  const updated = res.data.user;
-  setUser(updated);
-  localStorage.setItem("user", JSON.stringify(updated));
-
-  loadPortfolioStats();
-
-  setShowSell(false);
-};
-
+  const getPriceColor = (s) => {
+    if (!s.prevPrice) return "text-gray-300";
+    return s.price > s.prevPrice
+      ? "text-green-400 flash-green"
+      : s.price < s.prevPrice
+        ? "text-red-400 flash-red"
+        : "text-gray-300";
+  };
 
   return (
-    <div className="p-8 bg-gradient-to-br from-black via-gray-900 to-gray-800 min-h-screen text-white">
+    <div className="min-h-screen p-8 transition-colors duration-500
+  bg-gray-100 text-black
+   dark:bg-gradient-to-br dark:from-black dark:via-gray-900 dark:to-gray-800
+  dark:text-white">
+      <Ticker />
 
-      <h1 className="text-4xl font-bold mb-6 tracking-wide">📈 Live Market Dashboard</h1>
+      <h1 className="text-4xl p-8 mt-15 font-bold mb-6 tracking-wide">📊 Dashboard</h1>
 
       {user && (
-        <div className="text-lg mb-8 opacity-90">
-          Welcome back,
+        <p className="text-lg mb-8">
+          Welcome,
           <span className="text-yellow-400 font-semibold"> {user.name}</span>
           — Balance:
           <span className="text-green-400 font-semibold">
-            &nbsp;₹{user.balance.toFixed(2)}
+            {" "}₹{user.balance.toFixed(2)}
           </span>
-        </div>
+        </p>
       )}
 
       {stats && (
-        <div className="bg-gray-800/40 p-6 rounded-xl border border-gray-700 backdrop-blur-xl shadow-xl w-96 mb-10">
-          <h2 className="text-xl font-semibold mb-4">Portfolio Metrics</h2>
+  <>
+    <div className="bg-gray-800/40 p-6 rounded-xl border border-gray-700 shadow-xl w-96 mb-10">
+      <h2 className="text-xl font-semibold mb-4">Portfolio Metrics</h2>
 
-          <p className="mb-1">Invested: ₹{stats.investedValue.toFixed(2)}</p>
-          <p className="mb-1">Current: ₹{stats.currentValue.toFixed(2)}</p>
+      <p>Invested: ₹{stats.investedValue.toFixed(2)}</p>
+      <p>Current: ₹{stats.currentValue.toFixed(2)}</p>
 
-          <p className="mt-2">
-            P/L:{" "}
-            <span className={stats.profitLoss >= 0 ? "text-green-400" : "text-red-400"}>
-              ₹{stats.profitLoss.toFixed(2)}
-            </span>
-          </p>
+      <p className="mt-2">
+        P/L:{" "}
+        <span className={stats.profitLoss >= 0 ? "text-green-400" : "text-red-400"}>
+          ₹{stats.profitLoss.toFixed(2)}
+        </span>
+      </p>
 
-          <p>
-            P/L %:{" "}
-            <span className={stats.profitPercent >= 0 ? "text-green-400" : "text-red-400"}>
-              {stats.profitPercent.toFixed(2)}%
-            </span>
-          </p>
+      <p>
+        P/L %:{" "}
+        <span className={stats.profitPercent >= 0 ? "text-green-400" : "text-red-400"}>
+          {stats.profitPercent.toFixed(2)}%
+        </span>
+      </p>
 
-          <hr className="my-3 border-gray-600" />
+      <hr className="my-3 border-gray-600" />
+      <p><b>Net Worth:</b> ₹{stats.netWorth.toFixed(2)}</p>
+    </div>
 
-          <p><b>Net Worth:</b> ₹{stats.netWorth.toFixed(2)}</p>
+    {/* 📈 Net Worth Live Line Chart */}
+    {stats.netWorthHistory?.length > 0 && (
+      <div className="mb-10">
+        <PortfolioChart history={stats.netWorthHistory} />
+      </div>
+    )}
+  </>
+)}
 
+      
+      {/* Gainers / Losers */}
+      <div className="grid grid-cols-2 gap-4 mb-10">
+        <div className="bg-green-900/30 p-4 rounded-lg border border-green-500">
+          <h3 className="text-green-300 font-bold mb-2">Top Gainers</h3>
+          {stocks
+            .filter(s => s.prevPrice)
+            .sort((a,b)=> (b.price - b.prevPrice) - (a.price - a.prevPrice))
+            .slice(0,3)
+            .map(s => (
+              <p key={s._id}>{s.symbol} — ₹{s.price}</p>
+            ))}
         </div>
-      )}
 
-      {/* STOCK TABLE */}
-      <h2 className="text-2xl mb-3 font-semibold">Market Stocks</h2>
+        <div className="bg-red-900/30 p-4 rounded-lg border border-red-500">
+          <h3 className="text-red-300 font-bold mb-2">Top Losers</h3>
+          {stocks
+            .filter(s => s.prevPrice)
+            .sort((a,b)=> (a.price - a.prevPrice) - (b.price - b.prevPrice))
+            .slice(0,3)
+            .map(s => (
+              <p key={s._id}>{s.symbol} — ₹{s.price}</p>
+            ))}
+        </div>
+      </div>
 
-      <table className="w-full bg-gray-900/40 border border-gray-700 rounded-xl overflow-hidden">
-        <thead className="bg-gray-700/40">
+      {/* Stocks Table */}
+      <table className="w-full bg-gray-900/30 border border-gray-700 rounded-xl">
+        <thead className="bg-gray-700">
           <tr>
             <th className="p-3">Symbol</th>
             <th className="p-3">Name</th>
-            <th className="p-3">Price</th>
+            <th className="p-3">Live Price</th>
             <th className="p-3"></th>
           </tr>
         </thead>
-
         <tbody>
           {stocks.map((s) => (
-            <tr key={s._id} className="border-t border-gray-800 hover:bg-gray-800/60 transition">
-              <td className="p-3">{s.symbol}</td>
+            <tr key={s._id} className="border-t border-gray-700 hover:bg-gray-800/60">
+              <td
+                className="p-3 cursor-pointer text-blue-400 hover:underline"
+                onClick={() => window.location.href = `/stock/${s.symbol}`}
+              >
+                {s.symbol}
+              </td>
               <td className="p-3">{s.name}</td>
-              <td className="p-3">₹{s.price}</td>
+              <td className={`p-3 font-semibold transition-all duration-500 ${getPriceColor(s)}`}>
+                ₹{s.price}
+              </td>
               <td className="p-3">
                 <button
                   onClick={() => openBuyModal(s)}
@@ -174,13 +241,12 @@ const confirmSell = async (qty) => {
         </tbody>
       </table>
 
-      {/* HOLDINGS */}
       {user?.holdings?.length > 0 && (
         <>
-          <h2 className="text-2xl font-semibold mt-12 mb-3">Holdings</h2>
+          <h2 className="text-2xl font-semibold mt-12 mb-3">Your Holdings</h2>
 
-          <table className="w-full bg-gray-900/40 border border-gray-700 rounded-xl overflow-hidden">
-            <thead className="bg-gray-700/40">
+          <table className="w-full bg-gray-900/30 border border-gray-700 rounded-xl">
+            <thead className="bg-gray-700">
               <tr>
                 <th className="p-3">Symbol</th>
                 <th className="p-3">Qty</th>
@@ -188,10 +254,9 @@ const confirmSell = async (qty) => {
                 <th className="p-3"></th>
               </tr>
             </thead>
-
             <tbody>
               {user.holdings.map((h) => (
-                <tr key={h._id} className="border-t border-gray-800 hover:bg-gray-800/60 transition">
+                <tr key={h._id} className="border-t border-gray-700 hover:bg-gray-800/60">
                   <td className="p-3">{h.symbol}</td>
                   <td className="p-3">{h.quantity}</td>
                   <td className="p-3">₹{h.avgPrice.toFixed(2)}</td>
@@ -210,6 +275,7 @@ const confirmSell = async (qty) => {
         </>
       )}
 
+      {/* MODALS */}
       {showBuy && (
         <BuyModal
           stock={selectedStock}
@@ -217,14 +283,14 @@ const confirmSell = async (qty) => {
           onConfirm={confirmBuy}
         />
       )}
-    {showSell && (
-  <SellModal
-    holding={selectedHolding}
-    onClose={() => setShowSell(false)}
-    onConfirm={confirmSell}
-  />
-)}
-  <Ticker />
+
+      {showSell && (
+        <SellModal
+          holding={selectedHolding}
+          onClose={() => setShowSell(false)}
+          onConfirm={confirmSell}
+        />
+      )}
 
     </div>
   );

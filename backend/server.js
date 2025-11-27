@@ -33,6 +33,7 @@ app.use("/api/stocks", require("./routes/Stocks"));
 app.use("/api/trades", require("./routes/trades"));
 app.use("/api/portfolio", require("./routes/portfolio"));
 app.use("/api/admin", require("./routes/admin"));
+app.use("/api/history", require("./routes/transactions"));
 
 const PORT = process.env.PORT || 5000;
 

@@ -15,9 +15,12 @@ export default function Leaderboard() {
   };
 
   return (
-    <div className="p-6 bg-gradient-to-br from-gray-900 via-gray-800 to-black min-h-screen text-white">
+    <div className="min-h-screen p-8 transition-colors duration-500
++   bg-gray-100 text-black
++   dark:bg-gradient-to-br dark:from-black dark:via-gray-900 dark:to-gray-800
++   dark:text-white">
 
-      <h1 className="text-4xl font-bold mb-8 tracking-wide">Leaderboard</h1>
+      <h1 className="text-4xl font-bold mb-8 tracking-wide p-8 mt-15">Leaderboard</h1>
 
       <table className="w-full bg-gray-800/40 shadow-2xl border border-gray-700 rounded-2xl overflow-hidden backdrop-blur-xl">
 

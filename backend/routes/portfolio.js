@@ -1,8 +1,9 @@
-const express = require("express");
-const router = express.Router();
+const router = require("express").Router();
+const auth = require("../middleware/auth");
 const { getPortfolioStats, getLeaderboard } = require("../controllers/portfolioController");
 
-router.get("/stats", getPortfolioStats);
-router.get("/leaderboard", getLeaderboard);
+// Secure Routes
+router.get("/stats", auth, getPortfolioStats);
+router.get("/leaderboard", auth, getLeaderboard);
 
 module.exports = router;

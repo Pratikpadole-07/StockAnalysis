@@ -47,7 +47,10 @@ const changeVolatility = async (stock)=>{
 
 
   return (
-    <div className="p-6 bg-gradient-to-br min-h-screen from-gray-900 via-gray-800 to-black text-white">
+    <div className="min-h-screen p-8 transition-colors duration-500
++   bg-gray-100 text-black
++   dark:bg-gradient-to-br dark:from-black dark:via-gray-900 dark:to-gray-800
++   dark:text-white">
 
       <h1 className="text-4xl font-bold tracking-wide mb-8">Admin Panel</h1>
 
