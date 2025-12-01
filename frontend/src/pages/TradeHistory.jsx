@@ -3,6 +3,7 @@ import { getTradeHistory } from "../api/api";
 
 export default function TradeHistory() {
   const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadHistory();
@@ -11,21 +12,27 @@ export default function TradeHistory() {
   const loadHistory = async () => {
     try {
       const res = await getTradeHistory();
-      setHistory(res.data);
+      setHistory(res.data.data || []); // 👈 FIXED
     } catch (err) {
       console.error("Failed to load trade history:", err);
+      setHistory([]);
     }
+    setLoading(false);
   };
 
+  if (loading)
+    return <p className="mt-10 text-center text-gray-400">Loading history...</p>;
+
   return (
-   <div className="min-h-screen p-8 transition-colors duration-500
-+   bg-gray-100 text-black
-+   dark:bg-gradient-to-br dark:from-black dark:via-gray-900 dark:to-gray-800
-+   dark:text-white">
-      <h2 className="text-3xl font-semibold mb-6 p-8 mt-5">📜 Trade History</h2>
+    <div className="min-h-screen p-8 transition-colors duration-500
+    bg-gray-100 text-black
+    dark:bg-gradient-to-br dark:from-black dark:via-gray-900 dark:to-gray-800
+    dark:text-white">
+
+      <h2 className="text-3xl font-semibold mb-6">📜 Trade History</h2>
 
       {history.length === 0 ? (
-        <p className="opacity-70">No trades yet...</p>
+        <p className="text-gray-400 text-center mt-20">No trades yet...</p>
       ) : (
         <table className="w-full border border-gray-700 bg-gray-800/50 rounded-xl overflow-hidden">
           <thead className="bg-gray-700/50">
@@ -45,17 +52,21 @@ export default function TradeHistory() {
                 className="border-t border-gray-700 hover:bg-gray-700/30 transition"
               >
                 <td className="p-3">{h.symbol}</td>
-                <td
-                  className={`p-3 font-semibold ${
-                    h.type === "buy" ? "text-green-400" : "text-red-400"
-                  }`}
-                >
-                  {h.type.toUpperCase()}
+
+                <td className={`p-3 font-semibold ${
+                  h.type === "BUY" ? "text-green-400" : "text-red-400"
+                }`}>
+                  {h.type}
                 </td>
+
                 <td className="p-3">{h.quantity}</td>
-                <td className="p-3">₹{h.price.toFixed(2)}</td>
+
+                <td className="p-3">₹{Number(h.price).toFixed(2)}</td>
+
                 <td className="p-3">
-                  {new Date(h.date).toLocaleString("en-IN")}
+                  {new Date(h.date).toLocaleString("en-IN", {
+                    hour12: false,
+                  })}
                 </td>
               </tr>
             ))}

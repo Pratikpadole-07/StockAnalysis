@@ -1,144 +1,37 @@
-import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import ThemeToggle from "./ThemeToggle";
+import React from "react";
+import { Link } from "react-router-dom";
 
 export default function Navbar() {
-  const location = useLocation();
-  const [open, setOpen] = useState(false);
-
   const token = localStorage.getItem("token");
 
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    window.location.href = "/login";
+    window.location.href = "/";
   };
-
-  const goHome = () => {
-    if (token) window.location.href = "/dashboard";
-    else window.location.href = "/login";
-  };
-
-  const navItems = [
-    { path: "/dashboard", label: "Dashboard" },
-    { path: "/leaderboard", label: "Leaderboard" },
-    { path: "/analytics", label: "Analytics" },
-    { path: "/history", label: "History" }
-  ];
-
-  const isActive = (path) => location.pathname === path;
 
   return (
-    <nav className="bg-gray-900/80 backdrop-blur-xl border-b border-gray-700 text-white fixed top-0 left-0 w-full z-50">
-      <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-        
-        {/* Logo */}
-        <h2
-          onClick={goHome}
-          className="text-2xl font-bold text-yellow-400 cursor-pointer hover:scale-110 transition-all"
-        >
-          StockSim
-        </h2>
+    <div className="fixed top-0 left-0 w-full bg-gray-900 text-white shadow-lg z-[9999] px-10 py-3 flex justify-between items-center">
 
-        {/* Desktop Menu */}
-        <div className="hidden md:flex items-center gap-6">
-          {token &&
-            navItems.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`text-sm font-medium transition ${
-                  isActive(item.path)
-                    ? "text-yellow-400 border-b-2 border-yellow-400 pb-1"
-                    : "text-gray-300 hover:text-white"
-                }`}
-              >
-                {item.label}
-              </Link>
-            ))}
+      <Link to="/" className="text-2xl font-bold tracking-wide">📈 StockPro</Link>
 
-          {/* FIX: Removed button wrapper */}
-          <ThemeToggle />
+      <div className="flex gap-6 text-lg">
+        <Link to="/dashboard" className="hover:text-yellow-400">Dashboard</Link>
+        <Link to="/leaderboard" className="hover:text-yellow-400">Leaderboard</Link>
+        <Link to="/analytics" className="hover:text-yellow-400">Analytics</Link>
+        <Link to="/trade-history" className="hover:text-yellow-400">History</Link>
 
-          {token ? (
-            <button
-              onClick={logout}
-              className="px-4 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 transition"
-            >
-              Logout
-            </button>
-          ) : (
-            <>
-              <Link to="/login" className="text-gray-300 hover:text-white text-sm">
-                Login
-              </Link>
-              <Link
-                to="/register"
-                className="px-3 py-1 rounded-lg bg-yellow-500 font-medium hover:bg-yellow-600 text-black text-sm"
-              >
-                Register
-              </Link>
-            </>
-          )}
-        </div>
-
-        {/* Mobile Menu Button */}
-        <button
-          className="md:hidden text-gray-300 text-2xl"
-          onClick={() => setOpen(!open)}
-        >
-          ☰
-        </button>
+        {token ? (
+          <button onClick={logout} className="bg-red-600 px-4 py-1 rounded hover:bg-red-700">
+            Logout
+          </button>
+        ) : (
+          <Link to="/login">
+            <button className="bg-blue-600 px-4 py-1 rounded hover:bg-blue-700">Login</button>
+          </Link>
+        )}
       </div>
 
-      {/* Mobile Dropdown */}
-      {open && (
-        <div className="md:hidden bg-gray-900/95 px-6 pb-4 flex flex-col gap-3 border-t border-gray-700">
-          {token &&
-            navItems.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={() => setOpen(false)}
-                className={`text-sm py-2 transition ${
-                  isActive(item.path)
-                    ? "text-yellow-400"
-                    : "text-gray-300 hover:text-white"
-                }`}
-              >
-                {item.label}
-              </Link>
-            ))}
-
-          <ThemeToggle />
-
-          {token ? (
-            <button
-              onClick={logout}
-              className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-sm"
-            >
-              Logout
-            </button>
-          ) : (
-            <>
-              <Link
-                to="/login"
-                onClick={() => setOpen(false)}
-                className="text-gray-300 hover:text-white text-sm"
-              >
-                Login
-              </Link>
-              <Link
-                to="/register"
-                onClick={() => setOpen(false)}
-                className="px-3 py-1 rounded-lg bg-yellow-500 font-medium hover:bg-yellow-600 text-black text-sm"
-              >
-                Register
-              </Link>
-            </>
-          )}
-        </div>
-      )}
-    </nav>
+    </div>
   );
 }

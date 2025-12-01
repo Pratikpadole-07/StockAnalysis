@@ -2,35 +2,36 @@ import React, { useEffect, useState } from "react";
 import socket from "../socket/socket";
 
 export default function Ticker() {
-
   const [stocks, setStocks] = useState([]);
 
   useEffect(() => {
-    socket.on("update-stocks", (data) => {
-      setStocks(data);
-    });
+    const handleUpdate = (data) => {
+      const nextStocks = Array.isArray(data) ? data : data?.stocks;
+      setStocks(Array.isArray(nextStocks) ? nextStocks : []);
+    };
 
-    return () => socket.off("update-stocks");
+    socket.on("update-stocks", handleUpdate);
+    return () => socket.off("update-stocks", handleUpdate);
   }, []);
 
   return (
-    <div className="fixed bottom-0 left-0 w-full bg-black/60 text-white border-t border-gray-700 backdrop-blur-xl py-2 overflow-hidden z-50">
+    <div className="w-full bg-black/70 backdrop-blur-md text-white border-y border-gray-700 py-2 overflow-hidden fixed bottom-0 left-0 z-[999]">
+      <div className="animate-marquee whitespace-nowrap flex gap-10 px-6">
+        {stocks.map((s) => {
+          const color = !s.prevPrice
+            ? "text-gray-400"
+            : s.price > s.prevPrice
+            ? "text-green-400"
+            : "text-red-400";
 
-      <div className="animate-marquee whitespace-nowrap">
-
-        {stocks.map(s => (
-          <span key={s._id} className="mx-6 font-semibold">
-
-            {s.symbol}:
-            <span className={s.price > s.prevPrice ? "text-green-400" : "text-red-400"}>
-              ₹{s.price}
+          return (
+            <span key={s._id} className="flex-column items-center space-x-2 font-semibold">
+              <span className="text-cyan-300">{s.symbol}</span>
+              <span className={color}>₹{s.price}</span>
             </span>
-
-          </span>
-        ))}
-
+          );
+        })}
       </div>
-
     </div>
   );
 }

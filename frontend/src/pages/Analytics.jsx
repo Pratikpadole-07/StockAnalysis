@@ -6,6 +6,9 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 export default function Analytics() {
   const [stats, setStats] = useState(null);
 
+  const format = (num) =>
+    typeof num === "number" && !isNaN(num) ? num.toFixed(2) : "0.00";
+
   useEffect(() => {
     loadStats();
   }, []);
@@ -13,54 +16,51 @@ export default function Analytics() {
   const loadStats = async () => {
     try {
       const res = await getPortfolioStats();
-      setStats(res.data);
+      setStats(res.data.data || {});
     } catch (err) {
       console.log("Failed to fetch stats", err);
     }
   };
 
-  if (!stats) return <p className="text-center text-white p-6">Loading analytics...</p>;
+  if (!stats)
+    return <p className="text-center text-white p-6">Loading analytics...</p>;
 
   const COLORS = ["#FF9800", "#4CAF50", "#2196F3", "#E91E63", "#9C27B0"];
 
   const pieData = (stats.holdings || []).map((h) => ({
-  name: h.symbol,
-  value: (h.quantity || 0) * (h.currentPrice || 0),
-}));
-
+    name: h.symbol,
+    value: (h.quantity || 0) * (h.currentPrice || 0),
+  }));
 
   const lineData = [
-    { time: "Start", value: stats.investedValue },
-    { time: "Now", value: stats.currentValue }
+    { time: "Start", value: stats.investedValue || 0 },
+    { time: "Now", value: stats.currentValue || 0 },
   ];
 
   return (
-    <div className="min-h-screen p-8 transition-colors duration-500
-+   bg-gray-100 text-black
-+   dark:bg-gradient-to-br dark:from-black dark:via-gray-900 dark:to-gray-800
-+   dark:text-white">
-      <h1 className="text-4xl p-8 mt-15 font-bold mb-8">📊 Portfolio Analytics</h1>
+    <div className="min-h-screen p-8 bg-gray-100 text-black dark:bg-black dark:text-white">
+      <h1 className="text-4xl font-bold mb-8">📊 Portfolio Analytics</h1>
 
       {/* TOP CARDS */}
       <div className="grid grid-cols-3 gap-6 mb-10">
         <div className="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700">
           <h3 className="opacity-80">Invested Value</h3>
           <p className="text-xl font-bold text-yellow-300">
-            ₹{stats.investedValue.toFixed(2)}
+            ₹{format(stats.investedValue)}
           </p>
         </div>
 
         <div className="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700">
           <h3 className="opacity-80">Current Value</h3>
           <p className="text-xl font-bold text-green-400">
-            ₹{stats.currentValue.toFixed(2)}
+            ₹{format(stats.currentValue)}
           </p>
         </div>
 
         <div className="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700">
           <h3 className="opacity-80">Net Profit/Loss</h3>
           <p className={`text-xl font-bold ${stats.profitLoss >= 0 ? "text-green-400" : "text-red-400"}`}>
-            ₹{stats.profitLoss.toFixed(2)}
+            ₹{format(stats.profitLoss)}
           </p>
         </div>
       </div>
@@ -70,23 +70,20 @@ export default function Analytics() {
         {/* Pie Chart */}
         <div className="bg-gray-900 p-6 rounded-xl shadow-xl border border-gray-700">
           <h3 className="font-semibold mb-4">Holdings Allocation</h3>
-          <PieChart width={400} height={350}>
-            {pieData.length === 0 && (
-  <p className="text-center text-gray-400 mt-4">
-    No investments yet. Buy some stocks! 📈
-  </p>
-)}
 
-            <Pie data={pieData} dataKey="value" nameKey="name" outerRadius={120}>
-              {pieData.length > 0 &&
-                pieData.map((entry, idx) => (
-                    <Cell key={`cell-${idx}`} fill={COLORS[idx % COLORS.length]} />
+          {pieData.length === 0 ? (
+            <p className="text-center text-gray-400 mt-4">No investments yet. Buy some stocks! 📈</p>
+          ) : (
+            <PieChart width={400} height={350}>
+              <Pie data={pieData} dataKey="value" nameKey="name" outerRadius={120}>
+                {pieData.map((entry, idx) => (
+                  <Cell key={`cell-${idx}`} fill={COLORS[idx % COLORS.length]} />
                 ))}
-
-            </Pie>
-            <Tooltip />
-            <Legend />
-          </PieChart>
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          )}
         </div>
 
         {/* Line Chart */}

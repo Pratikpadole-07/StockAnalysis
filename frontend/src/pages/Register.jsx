@@ -1,79 +1,128 @@
 import React, { useState, useEffect } from "react";
 import { registerUser } from "../api/api";
+import { Link } from "react-router-dom";
 
 export default function Register() {
 
-  const [name,setName] = useState("");
-  const [email,setEmail] = useState("");
-  const [password,setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if(localStorage.getItem("token")){
-      window.location.href="/dashboard";
+    if (localStorage.getItem("token")) {
+      window.location.href = "/dashboard";
     }
   }, []);
 
-  const submit = async ()=>{
-     try{
-       await registerUser({name,email,password});
-       alert("Registration successful!");
-       window.location.href="/login";
-     }catch{
-       alert("Failed! Try again.");
-     }
-  }
+  const submit = async () => {
+    if (!name || !email || !password) {
+      alert("Please fill all fields");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await registerUser({ name, email, password });
+      alert("🎉 Registration successful!");
+      window.location.href = "/login";
+    } catch {
+      alert("❌ Registration failed, please try again!");
+    }
+    setLoading(false);
+  };
 
   return (
-    <div className="min-h-screen p-8 transition-colors duration-500
-+   bg-gray-100 text-black
-+   dark:bg-gradient-to-br dark:from-black dark:via-gray-900 dark:to-gray-800
-+   dark:text-white">
+    <div className="min-h-screen flex items-center justify-center px-4
+      bg-gray-100 dark:bg-black dark:text-white transition-colors duration-500">
 
-      <div className="bg-gray-800/40 border border-gray-700 backdrop-blur-xl shadow-xl rounded-2xl p-8 w-96">
+      <div className="w-full max-w-md p-8 rounded-2xl
+        bg-white/10 backdrop-blur-xl shadow-2xl
+        border border-gray-300 dark:border-gray-700 animate-fadeIn">
 
-        <h1 className="text-3xl font-bold text-white text-center mb-6 tracking-wide">
-          Create Account
-        </h1>
+        <h2 className="text-3xl font-extrabold mb-2 text-center">
+          Create Account ✨
+        </h2>
 
-        <p className="text-gray-300 text-center mb-8">
-          Join the simulated stock market
+        <p className="text-center text-gray-500 dark:text-gray-400 mb-8">
+          Join the Smart Stock Trading Community
         </p>
 
-        <input
-          className="w-full bg-gray-900/60 border border-gray-700 text-white rounded-lg p-3 mb-4 focus:outline-none focus:border-yellow-400"
-          placeholder="Full Name"
-          onChange={e=>setName(e.target.value)}
-        />
+        {/* Name */}
+        <div className="relative mb-6">
+          <input
+            type="text"
+            required
+            onChange={(e) => setName(e.target.value)}
+            className="w-full p-3 pt-5 bg-gray-200 dark:bg-gray-800
+            rounded-lg text-black dark:text-white
+            focus:ring-2 focus:ring-yellow-500 outline-none peer"
+          />
+          <label className="absolute left-3 top-2 text-gray-600 dark:text-gray-400
+            text-sm transition-transform
+            peer-focus:-translate-y-2 peer-focus:text-xs peer-focus:text-yellow-500
+            peer-valid:-translate-y-2 peer-valid:text-xs">
+            Full Name
+          </label>
+        </div>
 
-        <input
-          className="w-full bg-gray-900/60 border border-gray-700 text-white rounded-lg p-3 mb-4 focus:outline-none focus:border-yellow-400"
-          placeholder="Email"
-          onChange={e=>setEmail(e.target.value)}
-        />
+        {/* Email */}
+        <div className="relative mb-6">
+          <input
+            type="email"
+            required
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full p-3 pt-5 bg-gray-200 dark:bg-gray-800
+            rounded-lg text-black dark:text-white
+            focus:ring-2 focus:ring-yellow-500 outline-none peer"
+          />
+          <label className="absolute left-3 top-2 text-gray-600 dark:text-gray-400
+            text-sm transition-transform
+            peer-focus:-translate-y-2 peer-focus:text-xs peer-focus:text-yellow-500
+            peer-valid:-translate-y-2 peer-valid:text-xs">
+            Email
+          </label>
+        </div>
 
-        <input
-          type="password"
-          className="w-full bg-gray-900/60 border border-gray-700 text-white rounded-lg p-3 mb-6 focus:outline-none focus:border-yellow-400"
-          placeholder="Password"
-          onChange={e=>setPassword(e.target.value)}
-        />
+        {/* Password */}
+        <div className="relative mb-6">
+          <input
+            type="password"
+            required
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full p-3 pt-5 bg-gray-200 dark:bg-gray-800
+            rounded-lg text-black dark:text-white
+            focus:ring-2 focus:ring-yellow-500 outline-none peer"
+          />
+          <label className="absolute left-3 top-2 text-gray-600 dark:text-gray-400
+            text-sm transition-transform
+            peer-focus:-translate-y-2 peer-focus:text-xs peer-focus:text-yellow-500
+            peer-valid:-translate-y-2 peer-valid:text-xs">
+            Password
+          </label>
+        </div>
 
+        {/* Submit Button */}
         <button
           onClick={submit}
-          className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg py-3 transition-all shadow"
-        >
-          Register
+          disabled={loading}
+          className="w-full py-3 rounded-lg font-semibold
+          bg-yellow-500 hover:bg-yellow-600 text-black
+          transition-all shadow-md disabled:bg-gray-600
+          disabled:cursor-not-allowed">
+          {loading ? "Creating Account..." : "Register"}
         </button>
 
-        <p className="mt-5 text-gray-400 text-center">
+        <p className="mt-6 text-center text-gray-600 dark:text-gray-400">
           Already have an account?{" "}
-          <a href="/login" className="text-blue-400 hover:text-blue-500">
+          <Link
+            to="/login"
+            className="text-blue-500 hover:underline"
+          >
             Login here
-          </a>
+          </Link>
         </p>
-
       </div>
-
     </div>
   );
 }

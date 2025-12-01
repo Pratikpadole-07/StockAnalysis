@@ -12,6 +12,7 @@ const stockSchema=new mongoose.Schema({
         active: { type: Boolean, default: false },
         amount: { type: Number, default: 0 },
         duration: { type: Number, default: 0 }
-    }
+    },
+    prevPrice: { type: Number, default: null }
 })
 module.exports = mongoose.model("Stock", stockSchema);

@@ -1,148 +1,181 @@
 const User = require("../models/User");
 const Stock = require("../models/Stock");
 const Transaction = require("../models/Transaction");
+const Activity = require("../models/Activity");
 const calcStats = require("../services/portfolioService");
+const response = require("../utils/response");
+
+// WebSocket IO
+let io;
+exports.setIO = (socketIO) => {
+  io = socketIO;
+};
 
 function calcNewAvgPrice(oldQty, oldAvg, buyQty, buyPrice) {
   const totalCost = oldQty * oldAvg + buyQty * buyPrice;
   const newQty = oldQty + buyQty;
-  return {
-    qty: newQty,
-    avg: totalCost / newQty
-  };
+  return { qty: newQty, avg: totalCost / newQty };
 }
 
-// 📌 Save latest net worth point to DB (for chart)
 async function updateNetWorthHistory(user) {
   const stocks = await Stock.find();
   const stockMap = {};
-  stocks.forEach(s => stockMap[s._id] = s);
+  stocks.forEach((s) => (stockMap[s._id] = s));
 
   const stats = calcStats(user, stockMap);
 
   user.netWorthHistory.push({
     time: Date.now(),
-    value: stats.netWorth
+    value: stats.netWorth,
   });
 
   await user.save();
   return stats;
 }
 
-/********************** BUY STOCK **********************/
+/************** BUY STOCK **************/
 exports.buyStock = async (req, res) => {
   try {
-    const userId = req.userId;
+    const userId = req.userId; // ✅ FIXED
     const { stockId, quantity } = req.body;
-
     const qty = Number(quantity);
-    if (!stockId || qty <= 0) {
-      return res.status(400).json({ msg: "Invalid stock or quantity" });
-    }
+
+    if (!stockId || qty <= 0)
+      return response.error(res, "Invalid data", 400);
 
     const user = await User.findById(userId);
     const stock = await Stock.findById(stockId);
-    if (!user || !stock) return res.status(404).json({ msg: "Not found" });
+
+    if (!user || !stock)
+      return response.error(res, "User or Stock not found", 404);
 
     const cost = stock.price * qty;
     if (user.balance < cost)
-      return res.status(400).json({ msg: "Insufficient balance" });
+      return response.error(res, "Insufficient balance", 400);
 
     user.balance -= cost;
 
-    const idx = user.holdings.findIndex(h => h.stock.toString() === stock._id.toString());
+    const idx = user.holdings.findIndex(
+      (h) => h.stock.toString() === stockId
+    );
+
     if (idx === -1) {
       user.holdings.push({
         stock: stock._id,
         symbol: stock.symbol,
         quantity: qty,
-        avgPrice: stock.price
+        avgPrice: stock.price,
       });
     } else {
-      const curr = user.holdings[idx];
-      const { qty: newQty, avg: newAvg } =
-        calcNewAvgPrice(curr.quantity, curr.avgPrice, qty, stock.price);
-
-      curr.quantity = newQty;
-      curr.avgPrice = newAvg;
+      const h = user.holdings[idx];
+      const updated = calcNewAvgPrice(
+        h.quantity,
+        h.avgPrice,
+        qty,
+        stock.price
+      );
+      h.quantity = updated.qty;
+      h.avgPrice = updated.avg;
     }
 
-    // save holding & update history stats
     await user.save();
     const stats = await updateNetWorthHistory(user);
 
     await Transaction.create({
-      user: user._id,
+      user: userId,
       stock: stock._id,
       symbol: stock.symbol,
       type: "buy",
       quantity: qty,
       price: stock.price,
-      date: new Date()
     });
 
-    res.json({ msg: "Buy successful", user, stats });
+    await Activity.create({
+      user: userId,
+      message: `Bought ${qty} ${stock.symbol} @ ₹${stock.price}`,
+    });
 
+    if (io) io.to(userId.toString()).emit("notify", `Trade Executed: ${stock.symbol}`);
+
+    return response.success(res, "Buy successful", {
+      balance: user.balance,
+      holdings: user.holdings,
+      stats,
+    });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ msg: "Server error", error: err.message });
+    return response.error(res, "Server error", 500);
   }
 };
 
-/********************** SELL STOCK **********************/
+/************** SELL STOCK **************/
 exports.sellStock = async (req, res) => {
   try {
-    const userId = req.userId;
+    const userId = req.userId; // ✅ FIXED
     const { stockId, quantity } = req.body;
-
     const qty = Number(quantity);
+
     if (!stockId || qty <= 0)
-      return res.status(400).json({ msg: "Invalid request" });
+      return response.error(res, "Invalid data", 400);
 
     const user = await User.findById(userId);
     const stock = await Stock.findById(stockId);
 
-    const idx = user.holdings.findIndex(h => h.stock.toString() === stockId);
-    if (idx === -1) return res.status(400).json({ msg: "No holdings" });
+    if (!user || !stock)
+      return response.error(res, "User or Stock not found", 404);
 
-    const holding = user.holdings[idx];
-    if (holding.quantity < qty)
-      return res.status(400).json({ msg: "Not enough shares" });
+    const idx = user.holdings.findIndex(
+      (h) => h.stock.toString() === stockId
+    );
+    if (idx === -1) return response.error(res, "No holdings found", 400);
 
+    const h = user.holdings[idx];
+    if (h.quantity < qty)
+      return response.error(res, "Not enough shares", 400);
+
+    h.quantity -= qty;
     user.balance += stock.price * qty;
-    holding.quantity -= qty;
-    if (holding.quantity === 0) user.holdings.splice(idx, 1);
+    if (h.quantity === 0) user.holdings.splice(idx, 1);
 
     await user.save();
     const stats = await updateNetWorthHistory(user);
 
     await Transaction.create({
-      user: user._id,
+      user: userId,
       stock: stock._id,
       symbol: stock.symbol,
       type: "sell",
       quantity: qty,
       price: stock.price,
-      date: new Date()
     });
 
-    res.json({ msg: "Sell successful", user, stats });
+    await Activity.create({
+      user: userId,
+      message: `Sold ${qty} ${stock.symbol} @ ₹${stock.price}`,
+    });
 
+    if (io) io.to(userId.toString()).emit("notify", `Trade Executed: ${stock.symbol}`);
+
+    return response.success(res, "Sell successful", {
+      balance: user.balance,
+      holdings: user.holdings,
+      stats,
+    });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ msg: "Server error" });
+    return response.error(res, "Server error", 500);
   }
 };
 
-/********************** TRADE HISTORY **********************/
+/************** TRADE HISTORY **************/
 exports.getHistory = async (req, res) => {
   try {
-    const trades = await Transaction.find({ user: req.userId })
+    const trades = await Transaction.find({ user: req.userId }) // ✅ FIXED
       .sort({ date: -1 });
 
-    res.json(trades);
+    return response.success(res, "History fetched", trades);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ msg: "Server error" });
+    return response.error(res, "Server error", 500);
   }
 };

@@ -1,11 +1,13 @@
 const User = require("../models/User");
 const Stock = require("../models/Stock");
 const calcStats = require("../services/portfolioService");
+const response = require("../utils/response");
 
+/********************** GET PORTFOLIO STATS **********************/
 exports.getPortfolioStats = async (req, res) => {
   try {
     const user = await User.findById(req.userId);
-    if (!user) return res.status(404).json({ msg: "User not found" });
+    if (!user) return response.error(res, "User not found", 404);
 
     const stocks = await Stock.find();
     const stockMap = {};
@@ -20,18 +22,18 @@ exports.getPortfolioStats = async (req, res) => {
         if (!stock) return null;
 
         const cost = h.avgPrice * h.quantity;
-        const live = stock.price * h.quantity;
+        const liveValue = stock.price * h.quantity;
 
         investedValue += cost;
-        currentValue += live;
+        currentValue += liveValue;
 
         return {
+          stockId: h.stock,
           symbol: h.symbol,
           quantity: h.quantity,
           avgPrice: h.avgPrice,
           currentPrice: stock.price,
-          liveValue: live,
-          stockId: h.stock
+          liveValue
         };
       })
       .filter(Boolean);
@@ -42,7 +44,7 @@ exports.getPortfolioStats = async (req, res) => {
 
     const netWorth = user.balance + currentValue;
 
-    return res.json({
+    return response.success(res, "Portfolio stats fetched", {
       investedValue,
       currentValue,
       profitLoss,
@@ -53,39 +55,37 @@ exports.getPortfolioStats = async (req, res) => {
 
   } catch (err) {
     console.error("Portfolio Stats Error 💥", err);
-    return res.status(500).json({ msg: "Server error", error: err.message });
+    return response.error(res, "Server error", 500);
   }
 };
 
+/********************** GET LEADERBOARD **********************/
 exports.getLeaderboard = async (req, res) => {
-    try {
-        const users = await User.find();
+  try {
+    const users = await User.find();
+    const stocks = await Stock.find();
 
-        const stocks = await Stock.find();
-        const stockMap = {};
-        for (let s of stocks) {
-            stockMap[s._id.toString()] = s;
-        }
+    const stockMap = {};
+    stocks.forEach(s => stockMap[s._id.toString()] = s);
 
-        const leaderboard = users.map(u => {
-            const stats = calcStats(u, stockMap);
-            return {
-                name: u.name,
-                email: u.email,
-                netWorth: stats.netWorth,
-                investedValue: stats.investedValue,
-                currentValue: stats.currentValue,
-                profitPercent: stats.profitPercent,
-};
+    const leaderboard = users.map(user => {
+      const stats = calcStats(user, stockMap);
+      return {
+        name: user.name,
+        // email removed for security, but can enable if needed
+        netWorth: stats.netWorth,
+        investedValue: stats.investedValue,
+        currentValue: stats.currentValue,
+        profitPercent: stats.profitPercent.toFixed(2)
+      };
+    });
 
-        });
+    leaderboard.sort((a, b) => b.netWorth - a.netWorth);
 
-        leaderboard.sort((a,b)=> b.netWorth - a.netWorth);
+    return response.success(res, "Leaderboard fetched", leaderboard);
 
-        res.json(leaderboard);
-
-    } catch(err){
-        console.error(err);
-        res.status(500).json({ msg: "Server error" });
-    }
+  } catch (err) {
+    console.error(err);
+    return response.error(res, "Server error", 500);
+  }
 };
